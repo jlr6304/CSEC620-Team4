@@ -14,13 +14,14 @@ def preprocessor(training_set):
     prob_dictionnary = {'ham':ham_words,'spam':spam_words}
     
     #add 1 for all of the words to fix any issue where word does not show up in one of collection of SMSs
+    a=1
     for SMS in training_set:
         for word_position in range(1, len(SMS)):
             current_word = SMS[word_position]
             if current_word not in ham_words:
-                ham_words.update({current_word: 1})
+                ham_words.update({current_word: a})
             if current_word not in spam_words:
-                spam_words.update({current_word: 1})
+                spam_words.update({current_word: a})
 
     #start adding 1 for each occurance depending if it is ham or spam
     for SMS in training_set:
