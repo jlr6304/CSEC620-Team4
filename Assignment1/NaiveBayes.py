@@ -1,7 +1,14 @@
+import numpy as np # use of logarithm
 
-
-import numpy as np
-
+"""
+Preprocess of a dataset in TF-IDF in order to apply Naive Bayes classifier
+    parameters
+        training_set: unpreprocessed (tokenized) train set of SMSs
+    returns
+        prob_dictionnary: probabilities for each word to be a spam or a ham
+        number_of_ham_SMSs
+        number_of_spam_SMSs
+"""
 def preprocessor(training_set):
     #create two dictionaries of unique words, one for both ham and spam   
     ham_words={}
@@ -13,7 +20,7 @@ def preprocessor(training_set):
     #create a dictonary containing the two dictionaries of words
     prob_dictionnary = {'ham':ham_words,'spam':spam_words}
     
-    #add 1 for all of the words to fix any issue where word does not show up in one of collection of SMSs
+    #add 1 for all of the words to fix any issue where word doesn't appear in one of collection of SMSs
     a=1
     for SMS in training_set:
         for word_position in range(1, len(SMS)):
@@ -23,7 +30,7 @@ def preprocessor(training_set):
             if current_word not in spam_words:
                 spam_words.update({current_word: a})
 
-    #start adding 1 for each occurance depending if it is ham or spam
+    #start adding 1 for each occurence depending if it is ham or spam
     for SMS in training_set:
         #if the first word is ham 
         if SMS[0] == 'ham':
@@ -32,7 +39,7 @@ def preprocessor(training_set):
             for word_position in range(1,len(SMS)):
                 current_word=SMS[word_position]
                 if current_word in ham_words:
-                    #add 1 to the occurance of the current word for ham
+                    #add 1 to the occurence of the current word for ham
                     ham_words.update({current_word:((int)(ham_words[current_word])+1)})
                 else:
                     print("this should not run")
@@ -45,12 +52,12 @@ def preprocessor(training_set):
             for word_position in range(1, len(SMS)):
                 current_word = SMS[word_position]
                 if current_word in spam_words:
-                    #add 1 to the occurance of the current word for spam
+                    #add 1 to the occurence of the current word for spam
                     spam_words.update({current_word: ((int)(spam_words[current_word]) + 1)})
                 else:
                     print("this should not run")
                     spam_words.update({current_word: 1})
-    #count the nubmer of non-unqiue words by adding all ocurrances, separately for ham and spam
+    #count the nubmer of non-unqiue words by adding all ocurrences, separately for ham and spam
     number_of_ham_words=0
     for word in ham_words:
         number_of_ham_words+=ham_words[word]
@@ -65,16 +72,25 @@ def preprocessor(training_set):
     print("number of unique spam words:", len(spam_words))
     
     for word in ham_words:
-        #divide the occurance of the word by the total occurance of all words in ham SMSs
+        #divide the occurence of the word by the total occurence of all words in ham SMSs
         ham_words.update({word: ((ham_words[word])/number_of_ham_words)})
     
     for word in spam_words:
-        # divide the occurance of the word by the total occurance of all words in spam SMSs
+        # divide the occurence of the word by the total occurence of all words in spam SMSs
         spam_words.update({word: ((spam_words[word])/number_of_spam_words )})
 
-    #print(prob_dictionnary)
     return prob_dictionnary,number_of_ham_SMSs,number_of_spam_SMSs
 
+"""
+Function that classifies a new SMS based on the probability dictionnary
+    parameters:
+        test_SMS: message to classify
+        prob_dictionnary: probabilities for each word to be a spam or a ham
+        number_of_ham_SMSs
+        number_of_spam_SMSs
+    returns:
+        p_label: the predicted label for the test_SMS
+"""
 def classify(test_SMS,prob_dictionnary,number_of_ham_SMSs,number_of_spam_SMSs):
 
     #find the probibility that it is ham
@@ -121,13 +137,21 @@ def classify(test_SMS,prob_dictionnary,number_of_ham_SMSs,number_of_spam_SMSs):
         return "spam"
 
 
-
+"""
+Function that runs Multinomial Naive Bayes classifier
+    parameters
+        training_set: [list]  unpreprocessed (tokenized) train set of SMS
+        test_set: [list]  unpreprocessed (tokenized) test set of SMS
+    returns:
+        p_labels: predicted labels of test set
+        t_labels: true labels of test set
+"""
 def run(training_set, test_set):
-    #preprocess the training set and return the dictionary containing ham and spam dictionaries, number of ham SMSs, and number of Spam SMSs
+    # Preprocess the training set and return the dictionary containing ham and spam dictionaries, number of ham SMSs, and number of Spam SMSs
     prob_dictionnary,number_of_ham_SMSs,number_of_spam_SMSs = preprocessor(training_set)
     p_labels=[]
     t_labels=[]
-    #enumerate through each SMS of the test set
+    # Enumerate through each SMS of the test set
     for SMS in test_set:
         #predict the classification of the test SMS
         prediction=classify(SMS,prob_dictionnary,number_of_ham_SMSs,number_of_spam_SMSs)
@@ -137,11 +161,10 @@ def run(training_set, test_set):
         p_labels.append(prediction)
         t_labels.append(actual)
 
-    n = len(test_set)
-    comp = [(p_labels[i], t_labels[i]) for i in range(n)]
-    
-    for c in comp:
-        print(c)
+    # --- Print all the predicted labels and the related true labels
+    # n = len(test_set)
+    # comp = [(p_labels[i], t_labels[i]) for i in range(n)]    
+    # for c in comp:
+    #     print(c)
 
-    #return arrays of predicted and actual labels 
-    return p_labels, t_labels
+    return p_labels, t_labels # arrays of predicted and actual labels
