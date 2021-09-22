@@ -3,10 +3,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
-"""
-
-"""
 def tune_number_of_components():
+    """
+
+
+
+
+
+    """
     
     dataset = np.load("data/training_normal.npy")
 
@@ -33,10 +37,35 @@ def tune_number_of_components():
     plt.xlabel("number of components"); plt.ylabel("cumulative explained variance ratio (%)")
     plt.show()
 
-"""
 
-"""
+def reduce_dimensions(training, testing, n_components = 5):
+    """
+
+
+
+
+
+    """
+    
+    # ---- Fit PCA components on training set
+    pca = PCA(n_components=n_components)
+    pca.fit(training)
+
+    # ---- Project sets on PCA fitted components
+    projected_training = pca.transform(training)
+    projected_testing = pca.transform(testing)
+
+    return projected_training, projected_testing
+
+
 def compare2D():
+    """
+
+
+
+
+
+    """
     # ---- Import data
     training = np.load("data/training_normal.npy")
     testing_normal = np.load("data/testing_normal.npy")
@@ -47,14 +76,12 @@ def compare2D():
     pca.fit(training)  
 
     # ---- Projection of the new data into the 'principal components' space
-    training = pca.transform(training)
     testing_normal = pca.transform(testing_normal)
     testing_attack = pca.transform(testing_attack)
 
     # ---- Plot of the projections
     plt.figure()
     # Plot each projection
-    plt.scatter(training[:, 0], training[:, 1], c='g', alpha=.4, edgecolors='none', label="Normal Training")
     plt.scatter(testing_normal[:, 0], testing_normal[:, 1], c='b', alpha=.4, edgecolors='none', label="Normal")
     plt.scatter(testing_attack[:, 0], testing_attack[:, 1], c='r', alpha=.4, edgecolors='none', label="Attack")
     # Graphical changes
@@ -63,10 +90,14 @@ def compare2D():
     plt.show()
 
 
-"""
-
-"""
 def compare3D():
+    """
+
+
+
+
+
+    """
     # ---- Import data
     training = np.load("data/training_normal.npy")
     testing_normal = np.load("data/testing_normal.npy")
