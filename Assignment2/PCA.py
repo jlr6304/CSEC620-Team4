@@ -44,7 +44,7 @@ def compare2D():
 
     # ---- Fit PCA on train set
     pca = PCA(n_components=2)  
-    pca.fit(training)
+    pca.fit(training)  
 
     # ---- Projection of the new data into the 'principal components' space
     training = pca.transform(training)
