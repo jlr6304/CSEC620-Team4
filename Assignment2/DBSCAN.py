@@ -24,7 +24,7 @@ def create_cluster(distances_of_points, point_position,min_neighbors, epsilon, p
     print("point_position: ",point_position)
     print("points_in_cluster: ", points_in_cluster)
     print("epsilon: ", epsilon)
-    points_in_epilsion = find_points_in_epilsion(distances_of_points, epsilon,point_position,)
+    points_in_epilsion = find_points_in_epilsion(distances_of_points, epsilon,point_position)
     print("points_in_epilsion: ", points_in_epilsion)
     prevoius_points=points_in_cluster+points_in_epilsion
     for point_position in points_in_epilsion:
@@ -34,8 +34,31 @@ def create_cluster(distances_of_points, point_position,min_neighbors, epsilon, p
             new_points_in_cluster=create_cluster(distances_of_points, point_position,min_neighbors, epsilon,prevoius_points)
             for new_point_position in new_points_in_cluster:
                 if new_point_position not in points_in_cluster:
-                    points_in_cluster.append(new_point_position)
+                    if (distances_of_points[point_position][new_point_position] < epsilon):
+                        points_in_cluster.append(new_point_position)
     return points_in_cluster
+
+def determine_core_points(distances_of_points,epsilon,min_neighbors):
+    core_points_positions=[]
+    for point_position in range(0,500):
+        if len(find_points_in_epilsion(distances_of_points, epsilon,point_position))>=min_neighbors:
+            print("core point found")
+            core_points_positions.append(point_position)
+    return core_points_positions
+def test(testing, training, core_points,epsilon):
+    print(sklearn.metrics.pairwise.euclidean_distances(testing, core_points))
+    distances_from_core_points=sklearn.metrics.pairwise.euclidean_distances(testing, core_points)
+    for sample in distances_from_core_points:
+        anomaly=True
+        for distance in sample:
+            if distance <=epsilon:
+                anomaly=False
+        if anomaly==True:
+            print("anomaly")
+        if anomaly==False:
+            print("not anomaly")
+
+
 
 
 def run(training, testing, min_neighbors, epsilon):
@@ -47,8 +70,16 @@ def run(training, testing, min_neighbors, epsilon):
     print(distances_of_points)
     #print("distance from 2nd point to all other points:",distances_of_points[1])
     #print("distance from 2nd point to 3rd point:",distances_of_points[1][2])
-    clusters=[]
+    core_point_positions=determine_core_points(distances_of_points,epsilon,min_neighbors)
+    core_points=[]
+    for position in core_point_positions:
+        core_points.append(training[position])
+    test(testing, training, core_points,epsilon)
+
+'''
+    
     print("create clusters")
+
     clusters=[]
     for point_position in range(0,len(distances_of_points)):
         if check_if_in_cluster(clusters,point_position)==False:
@@ -59,7 +90,15 @@ def run(training, testing, min_neighbors, epsilon):
                 clusters.append(new_cluster)
                 print("new cluster:")
                 print(new_cluster)
+
     print("clusters:")
     print(clusters)
+    testing(testing, training, clusters)
     print("dinsacnatens done")
 
+
+    for cluster in clusters:
+        for point in cluster:
+            if point not in core_point_positions:
+                cluster.remove(point)
+'''
