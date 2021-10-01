@@ -14,7 +14,7 @@ def find_points_in_epilsion(distances_of_points, epsilon, point_position):
 
 def determine_core_points(distances_of_points,epsilon,min_neighbors):
     core_points_positions=[]
-    for point_position in range(0,500):
+    for point_position in range(0,len(distances_of_points)):
         if len(find_points_in_epilsion(distances_of_points, epsilon,point_position))>=min_neighbors:
             print("core point found")
             core_points_positions.append(point_position)
