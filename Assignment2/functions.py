@@ -1,5 +1,8 @@
 import numpy as np
-from numpy.core.fromnumeric import shape
+
+import sklearn
+import PCA
+from matplotlib import pyplot as plt
 
 def get_data(n_testing_samples=4000, attacks_ratio = .2):
     """
@@ -86,9 +89,9 @@ def score(predicted_labels, actual_labels, metrics=["confusion_mat"]):
     
     if "confusion_mat" in metrics: # Confusion matrix
         print("Confusion matrix:" )
-        print(f"     | {'ham':<8} | {'spam':<8}")
-        print(f"ham  | {beautify(TN/n):>8} | {beautify(FN/n):>8}")
-        print(f"spam | {beautify(FP/n):>8} | {beautify(TP/n):>8}")
+        print(f"       | {'normal':<8} | {'attack':<8}")
+        print(f"normal | {beautify(TN/n):>8} | {beautify(FN/n):>8}")
+        print(f"attack | {beautify(FP/n):>8} | {beautify(TP/n):>8}")
 
     if "accuracy" in metrics: # Accuracy
         accuracy= (TP+TN)/(TP+FP+TN+FN)
@@ -118,10 +121,33 @@ def score(predicted_labels, actual_labels, metrics=["confusion_mat"]):
     return(scores)
 
 
+def epsilon_start():
+    """
+    Function that plots the sorted distances of the nearest neighbor for all the samples of the PCA projected training set
+    the point with the greatest curvature is a decent starting value for epsilon in the clustering algorithms
+    """
+    training, testing, _ = get_data(n_testing_samples=4000, attacks_ratio = .2)
+    condensed_training, _ = PCA.reduce_dimensions(training, testing, 10)
+
+    # Compute the distances with all the points
+    distances = sklearn.metrics.pairwise.euclidean_distances(condensed_training,condensed_training)
+
+    distances = np.sort(distances, axis = 0) # sort the distances (shortest distance will be in the row 1)
+    distances = np.sort(distances[1,:]) # we keep only the distance with the nearest neighbor and sort this array
+
+    # Visualization
+    plt.plot(distances)
+    plt.xlabel("sorted samples"); plt.ylabel("distance of the nearest neighbor")
+    plt.show()
+
+
 # ------------- TEST OF THE FUNCTIONS
 if __name__ == '__main__':
     # Load data
     get_data(n_testing_samples=4000, attacks_ratio = .2)
     
-    # score function
+    # Test score function
     score([0, 1, 0, 1], [0, 0, 1, 1], metrics=['accuracy'])
+
+    # Plot starting value for epsilon
+    epsilon_start()
