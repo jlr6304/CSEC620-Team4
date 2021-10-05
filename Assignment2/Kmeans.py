@@ -2,6 +2,7 @@ import numpy as np
 import sklearn
 import functions
 import PCA
+import matplotlib.pyplot as plt
 
 
 def create_clusters(data, k, l):
@@ -78,19 +79,46 @@ def tune_hyperparameters():
 
     bold = lambda x: '\033[1m' + x + '\033[0m'
 
-    t_range = [.1,.11,.12,.13,.14,.15,.16,.17,.18,.19,.2]
+    t_range = [.1,.11,.12,.13,.14,.15,.16,.17,.18,.19]
     k_range = [1, 2 ,3,4,5,6,7,8,9,10]
     print(bold("k-Means anomaly detection"))
     parameters = []
     results = []
+    # generate array of f1-score results
     for t in t_range:
         for k in k_range:
+            print(f"k: {k}\nt: {t}")
             parameters.append((k, t))
             Kmeans_labels = run(condensed_training, condensed_testing, k, t, l=.01)
             results.append(functions.score(Kmeans_labels, labels, ["F1score"])["F1score"])
     index = np.argmax(results)
     ideal_parameters = parameters[index]
+    # display ideal parameters
     print(ideal_parameters, np.max(results))
+    ideal_k = ideal_parameters[0]
+    ideal_t = ideal_parameters[1]
+    # get 1-D results for each hyperparameter
+    t_results = []
+    k_results = []
+    for i in range(len(results)):
+        if ideal_t in parameters[i]:
+            k_results.append(results[i])
+        if ideal_k in parameters[i]:
+            t_results.append(results[i])
+    plt.figure()
+    # Plot each projection
+    plt.scatter(t_range, t_results, c='b', edgecolors='none')
+    # Graphical changes
+    plt.xlabel("t")
+    plt.ylabel("F1-score")
+    plt.show()
+    # Plot each projection
+    plt.figure()
+    plt.scatter(k_range, k_results, c='r', edgecolors='none')
+    # Graphical changes
+    plt.xlabel("k")
+    plt.ylabel("F1-score")
+    plt.show()
 
 
 if __name__ == "__main__":
