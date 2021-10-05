@@ -3,11 +3,12 @@ import sys
 import time
 import sklearn
 from functions import get_data
-from PCA import reduce_dimensions
-
-
+import PCA
 
 def find_points_in_epsilon(distances_of_points, epsilon, point_position):
+    """
+    Finds the samples that are inside a circle of radius epsilon
+    """
     points_in_epsilon = []
     #for each point's distance to the point, if it is less than the epsilon distance, then add it to the points_in_epsilion list
     for new_point_position in range(0, len(distances_of_points)):
@@ -16,7 +17,89 @@ def find_points_in_epsilon(distances_of_points, epsilon, point_position):
     return points_in_epsilon
 
 
+def determine_core_points(distances_of_points, epsilon, min_neighbors, verbose=False):
+    """
+    Determines the DBSCAN core points from the training dataset
+    """
+    core_points_positions = []
+    # for each point in the distances_of_points list, find the number of points in epsilon
+    for point_position in range(0, len(distances_of_points)):
+        # if there is more or equal points in epsilon then the min_neighbors, then the point is a core point
+        if len(find_points_in_epsilon(distances_of_points, epsilon, point_position)) >= min_neighbors:
+            if verbose:
+                print("core point found")
+            core_points_positions.append(point_position)
+    # return an list of positions of core points in the distances_of_points list
+    return core_points_positions
+
+
+def test(testing, training, core_points, epsilon, verbose=False):
+    """
+    Classifies the testing dataset samples as normal behavior or attacks
+    """
+    # find the distance of each test point to each and every core point
+    distances_from_core_points = sklearn.metrics.pairwise.euclidean_distances(testing, core_points)
+    labels = []
+    # if the distance from any of the core points to the test point is less than the epsilon, then the point is not a anomaly, and the anomly boolean should be set to False, otherwise it will stay true
+    for sample in distances_from_core_points:
+        anomaly = True
+        for distance in sample:
+            if distance <= epsilon:
+                anomaly = False
+                break
+        # a 1 should be added to the labels list if the anomaly boolean is true, otherwise add a 0 to the list
+        labels.append(1 if anomaly else 0)
+
+        # Print the category
+        if verbose:
+            if anomaly == True:
+                print("anomaly")
+            if anomaly == False:
+                print("not anomaly")
+    # return the list of 1 or 0s signifiying if a anomaly is present or not
+    return labels
+
+def get_predicted_labels(training, testing, min_neighbors, epsilon, verbose=False):
+    """
+    Computes the distance with the core points dans classifies the testing samples using the `test` function
+    """
+    # find the distances of each point to every other point
+    distances_of_points = sklearn.metrics.pairwise.euclidean_distances(training, training)
+
+    # find the positions of the core points in the distances_of_points list
+    core_point_positions = determine_core_points(distances_of_points, epsilon, min_neighbors, verbose)
+    core_points = []
+
+    #for every core point found, put the details of the core point in the core_points list
+    for position in core_point_positions:
+        core_points.append(training[position])
+    return test(testing, training, core_points, epsilon, verbose)
+
+
+def run(training, testing,min_neighbors, epsilon, verbose=False):
+    """
+    Runs the DBSCAN anomaly detector
+    """
+    distances_of_points = sklearn.metrics.pairwise.euclidean_distances(training, training)
+
+    core_point_positions = determine_core_points(distances_of_points, epsilon, min_neighbors, verbose)
+    core_points = []
+
+    for position in core_point_positions:
+        core_points.append(training[position])
+    test(testing, training, core_points, epsilon)
+
+    return test(testing, training, core_points, epsilon, verbose)
+
+
+# ------------------------------------
+#   hyperparameter tuning functions
+# ------------------------------------
+
 def find_f1score(predicted_labels, actual_labels, metrics=["confusion_mat"]):
+    """
+    Computes F1-score based on labels
+    """
     n = len(predicted_labels)
     scores = {}
     #find the number of True negatives, true positives, False positives, and false negatives by seeing if labels match or not
@@ -45,56 +128,11 @@ def find_f1score(predicted_labels, actual_labels, metrics=["confusion_mat"]):
     return (scores)
 
 
-def determine_core_points(distances_of_points, epsilon, min_neighbors, verbose=False):
-    core_points_positions = []
-    # for each point in the distances_of_points list, find the number of points in epsilon
-    for point_position in range(0, len(distances_of_points)):
-        # if there is more or equal points in epsilon then the min_neighbors, then the point is a core point
-        if len(find_points_in_epsilon(distances_of_points, epsilon, point_position)) >= min_neighbors:
-            if verbose:
-                print("core point found")
-            core_points_positions.append(point_position)
-    # return an list of positions of core points in the distances_of_points list
-    return core_points_positions
-
-
-def test(testing, training, core_points, epsilon, verbose=False):
-    # find the distance of each test point to each and every core point
-    distances_from_core_points = sklearn.metrics.pairwise.euclidean_distances(testing, core_points)
-    labels = []
-    # if the distance from any of the core points to the test point is less than the epsilon, then the point is not a anomaly, and the anomly boolean should be set to False, otherwise it will stay true
-    for sample in distances_from_core_points:
-        anomaly = True
-        for distance in sample:
-            if distance <= epsilon:
-                anomaly = False
-                break
-        # a 1 should be added to the labels list if the anomaly boolean is true, otherwise add a 0 to the list
-        labels.append(1 if anomaly else 0)
-
-        # Print the category
-        if verbose:
-            if anomaly == True:
-                print("anomaly")
-            if anomaly == False:
-                print("not anomaly")
-    # return the list of 1 or 0s signifiying if a anomaly is present or not
-    return labels
-
-def get_predicted_labels(training, testing, min_neighbors, epsilon, verbose=False):
-    # find the distances of each point to every other point
-    distances_of_points = sklearn.metrics.pairwise.euclidean_distances(training, training)
-
-    # find the positions of the core points in the distances_of_points list
-    core_point_positions = determine_core_points(distances_of_points, epsilon, min_neighbors, verbose)
-    core_points = []
-
-    #for every core point found, put the details of the core point in the core_points list
-    for position in core_point_positions:
-        core_points.append(training[position])
-    return test(testing, training, core_points, epsilon, verbose)
 
 def generate_scores(epsilon,min_neighbors,predicted_labels,actual_labels):
+    """
+    Prints and returns the score of an hyperparameters combination
+    """
     beautify = lambda x: str(np.round(x * 100, 3)) + " %"
     try:
         #find the f1score of the given labels
@@ -109,6 +147,9 @@ def generate_scores(epsilon,min_neighbors,predicted_labels,actual_labels):
 
 
 def tune_parameters(training, testing, actual_labels,initial_min_neighbors, initial_epsilon, verbose=False):
+    """
+    Tunes the epsilon and minimal number of neighbors hyperparameters
+    """
     epsilon = initial_epsilon
     list_of_values=[]
     #set the number of iterations for the epsilon value to be put through
@@ -192,17 +233,7 @@ def tune_parameters(training, testing, actual_labels,initial_min_neighbors, init
     return list_of_values[largest_f1score_position]
 
 
-def run(training, testing,min_neighbors, epsilon, verbose=False):
-    distances_of_points = sklearn.metrics.pairwise.euclidean_distances(training, training)
 
-    core_point_positions = determine_core_points(distances_of_points, epsilon, min_neighbors, verbose)
-    core_points = []
-
-    for position in core_point_positions:
-        core_points.append(training[position])
-    test(testing, training, core_points, epsilon)
-
-    return test(testing, training, core_points, epsilon, verbose)
 
 if __name__ == "__main__":
     training, testing, labels = get_data(n_testing_samples=4000, attacks_ratio=.2)
