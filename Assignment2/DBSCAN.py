@@ -2,8 +2,10 @@ import numpy as np
 import sys
 import time
 import sklearn
-from functions import get_data, score
-import matplotlib.pyplot as plt
+from functions import get_data
+from PCA import reduce_dimensions
+
+
 
 def find_points_in_epsilon(distances_of_points, epsilon, point_position):
     points_in_epsilon = []
@@ -44,7 +46,6 @@ def find_f1score(predicted_labels, actual_labels, metrics=["confusion_mat"]):
 
 
 def determine_core_points(distances_of_points, epsilon, min_neighbors, verbose=False):
-    # print("\tdetermining core points in training set")
     core_points_positions = []
     # for each point in the distances_of_points list, find the number of points in epsilon
     for point_position in range(0, len(distances_of_points)):
@@ -58,8 +59,6 @@ def determine_core_points(distances_of_points, epsilon, min_neighbors, verbose=F
 
 
 def test(testing, training, core_points, epsilon, verbose=False):
-    # print("\tanomaly detection on testing set")
-
     # find the distance of each test point to each and every core point
     distances_from_core_points = sklearn.metrics.pairwise.euclidean_distances(testing, core_points)
     labels = []
@@ -105,7 +104,7 @@ def generate_scores(epsilon,min_neighbors,predicted_labels,actual_labels):
         F1score=0
         pass
     #print the values of the current iteration
-    print(f"| {epsilon}  | {min_neighbors} | {F1score}")
+    print(f"| {epsilon}  | {min_neighbors} | {beautify(F1score)}")
     return F1score
 
 
@@ -193,6 +192,20 @@ def tune_parameters(training, testing, actual_labels,initial_min_neighbors, init
     return list_of_values[largest_f1score_position]
 
 
-def run(training, testing, actual_labels,min_neighbors, epsilon, verbose=False):
-    best_values=tune_parameters(training, testing, actual_labels,min_neighbors, epsilon, verbose=False)
-    return best_values[2]
+def run(training, testing,min_neighbors, epsilon, verbose=False):
+    distances_of_points = sklearn.metrics.pairwise.euclidean_distances(training, training)
+
+    core_point_positions = determine_core_points(distances_of_points, epsilon, min_neighbors, verbose)
+    core_points = []
+
+    for position in core_point_positions:
+        core_points.append(training[position])
+    test(testing, training, core_points, epsilon)
+
+    return test(testing, training, core_points, epsilon, verbose)
+
+if __name__ == "__main__":
+    training, testing, labels = get_data(n_testing_samples=4000, attacks_ratio=.2)
+    condensed_training, condensed_testing = PCA.reduce_dimensions(training, testing, 10)
+    tune_parameters(condensed_training, condensed_testing, labels,min_neighbors=5, epsilon=0.14, verbose=False)
+

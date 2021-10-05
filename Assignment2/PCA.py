@@ -153,3 +153,6 @@ if __name__ == "__main__":
 
     # ---- Choose the best number of features for the dimension reduction
     # tune_number_of_components(training)
+
+    # ---- Reduce the number of features (dimension reduction)
+    # reduce_dimensions(training, testing_normal, n_components = 5)
