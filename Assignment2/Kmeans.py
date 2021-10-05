@@ -1,12 +1,22 @@
 import numpy as np
 import sklearn
+import functions
+import PCA
 
 
 def create_clusters(data, k, l):
+    """
+    create clusters and find centroids of normalized data
+    :param data: data to be clustered
+    :param k: number of clusters to separate the data into
+    :param l: loss threshold between interations to stop reclustering
+    :return: a list of well-fit centroids
+    """
     # 1. Choose k centroids c1, ..., ck at random.
     centroid_indexes = np.random.choice(len(data), k, replace=False)
     centroids = data[centroid_indexes]
-    loss = l**2
+    iter = 0
+    loss = np.infty
     while True:
         clusters = []
         cluster_loss = []
@@ -16,17 +26,29 @@ def create_clusters(data, k, l):
         for i in range(k):
             clusters.append(data[classification == i])
             # 3. Recompute the centroids cj by taking the average of all the data points assigned to the jth cluster.
-            centroids[i, :] = np.mean(clusters[i])
+            centroids[i, :] = np.mean(clusters[i], axis=0)
             cluster_loss.append(np.sum(sklearn.metrics.pairwise.euclidean_distances(clusters[i], [centroids[i]])))
             # 4. Repeat (2) and (3) until the algorithm converges; that is, the difference between L X on successive
             # iterations is below a predetermined threshold.
-        if loss - sum(cluster_loss) < l:
-            break
+        # print(iter, loss, sum(cluster_loss), "\n", centroids)
+        if iter > 0:
+            if abs(loss - sum(cluster_loss)) < l:
+                break
         loss = sum(cluster_loss)
+        iter += 1
     return centroids
 
 
 def run(training, testing, k, t, l):
+    """
+    run: run the k-means algorithm
+    :param training: the training set
+    :param testing: the testing set
+    :param k: the number of nearest neighbors
+    :param t: the distance threshold by which to classify a point as an anomaly
+    :param l: the loss threshold required to stop re-clustering
+    :return: a list of binary labels (1 for anomaly, 0 for normal)
+    """
     labels = []
     # 1. Use k-Means clustering to identify the centroids of the clusters in the normal traffic
     # training set.
@@ -39,10 +61,38 @@ def run(training, testing, k, t, l):
     # then classify the sample as normal. If it is greater than your threshold value t,
     # then classify the sample as anomalous.
     for i in range(len(distances)):
-        if np.argmin(distances[i]) < t:
+        if np.min(distances[i]) < t:
             labels.append(0)
         else:
             labels.append(1)
     return labels
 
+
+def tune_hyperparameters():
+    """
+    tune_hyperparameters: function to test out multiple values for t and k and determine the combination of these
+    values which yields the highest f1-score
+    """
+    training, testing, labels = functions.get_data(n_testing_samples=4000, attacks_ratio = .2)
+    condensed_training, condensed_testing = PCA.reduce_dimensions(training, testing, 12)
+
+    bold = lambda x: '\033[1m' + x + '\033[0m'
+
+    t_range = [.1,.11,.12,.13,.14,.15,.16,.17,.18,.19,.2]
+    k_range = [1, 2 ,3,4,5,6,7,8,9,10]
+    print(bold("k-Means anomaly detection"))
+    parameters = []
+    results = []
+    for t in t_range:
+        for k in k_range:
+            parameters.append((k, t))
+            Kmeans_labels = run(condensed_training, condensed_testing, k, t, l=.01)
+            results.append(functions.score(Kmeans_labels, labels, ["F1score"])["F1score"])
+    index = np.argmax(results)
+    ideal_parameters = parameters[index]
+    print(ideal_parameters, np.max(results))
+
+
+if __name__ == "__main__":
+    tune_hyperparameters()
 
