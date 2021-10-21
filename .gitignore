@@ -1,6 +1,8 @@
 # temporary files
 bin/
 
+Assignment3/data/feature_vectors
+
 # Python cache files
 __pycache__/
 *.py[cod]
