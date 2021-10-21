@@ -32,7 +32,15 @@ def get_malware_samples():
             lines[file] = f.readlines()
             
             unique_features = unique_features.union(set(lines[file]))
-
+   
+    for feature in unique_features:
+        feature_vector=[]
+        for file in files_df['sha256']:
+            if feature in lines[file]:
+                feature_vector.append(1)
+            else:
+                feature_vector.append(0)
+        files_df[feature]=feature_vector
 
 if __name__ == '__main__':
     get_malware_samples()
