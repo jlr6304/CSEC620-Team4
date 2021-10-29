@@ -18,7 +18,7 @@ def recreate_categories(labels, recreate_func = lambda x: 'Benign' if x==-1 else
 
 def split_train_test(df, labels, features, total_samples=4000, test_ratio=.3, malware_ratio=.2):
     """
-    #### Split the `df` dataset into training/testing samples based on the ratios
+    #### Split the `df` dataset into training/testing samples based on the given ratios
     `Note:` it keeps the ratio of the malwares families of the source dataset
 
     Returns the train and test dataset with the associated labels
@@ -74,6 +74,9 @@ def split_train_test(df, labels, features, total_samples=4000, test_ratio=.3, ma
     return train_set, train_labels, test_set, test_labels, features
 
 def import_data():
+    """
+    #### Imports and returns the preprocessed data
+    """
     df = np.load('data/samples.npy', allow_pickle=True)
     labels = np.load('data/family.npy', allow_pickle=True)
     features = np.load('data/features.npy', allow_pickle=True)
@@ -102,7 +105,7 @@ def confusion_matrix(pred_labels, true_labels):
 
 def f1_score(pred_labels, true_labels, verbose=False):
     """
-    #### Compute the F1-score from the given labels (printing the result is optionnal)
+    #### Compute the F1-score from the given labels (printing the result is optional)
     """
 
     TP = sum((pred_labels == 'Malware') & (true_labels == 'Malware'))
@@ -121,7 +124,7 @@ def f1_score(pred_labels, true_labels, verbose=False):
 
 def accuracy(pred_labels, true_labels, verbose=False):
     """
-    #### Compute the accuracy of the given labels (printing the result is optionnal)
+    #### Compute the accuracy of the given labels (printing the result is optional)
     """
     acc = (pred_labels == true_labels).mean()
     
@@ -130,14 +133,7 @@ def accuracy(pred_labels, true_labels, verbose=False):
     else:
         return acc
 
-def distance_point_hyperplane(x, hyperplane):
-    w = hyperplane['slope']
-    b = hyperplane['intercept']
-    d = np.abs(np.dot(w, x)-b)/np.linalg.norm(w, 2)
-    return d.item()
-
 if __name__=='__main__':
-
     # ----- Test of the data import and the train/test split
     # df, labels = import_data()
 
