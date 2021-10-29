@@ -3,6 +3,9 @@ bin/
 
 Assignment3/data/feature_vectors
 Assignment3/data/save
+Assignment3/data/samples.npy
+Assignment3/data/features.npy
+Assignment3/data/family.npy
 
 # Python cache files
 __pycache__/
