@@ -1,9 +1,10 @@
 import itertools
+from numpy import not_equal
 import pandas as pd
 import time
-from Assignment3.functions import accuracy
+from functions import accuracy
 from SVM import *
-
+import os 
 
 def confusion_matrix_malware(pred_labels, true_labels):
     """
@@ -24,7 +25,6 @@ def confusion_matrix_malware(pred_labels, true_labels):
             conf_mat.loc[i, j] += 1
 
     # Print
-    (conf_mat/n).to_csv('temp.csv', sep='\t')
     print(bold("Confusion matrix:"))
     print(conf_mat/n)
     print("levels:", levels, '\n')
@@ -93,7 +93,7 @@ def one_vs_all(train_set, train_labels, test_set, test_labels):
         print(count/len(unique_labels_malware)*100, "% complete")
         count += 1
         binary_labels = to_binary_categories_malware(train_labels, lambda x: 1 if x == target_class else -1)
-        hyperplane, l = fit(train_set, binary_labels)
+        hyperplane, l = fit(train_set, binary_labels, n_epoch=10)
         family_data[target_class] = hyperplane
 
     # predict samples based on max distance from hyperplane.
@@ -152,7 +152,8 @@ def one_vs_one(train_set, train_labels, test_set, test_labels):
         binary_train_set = np.array([train_set[i] for i in range(0, len(train_labels)) if train_labels[i] in combination])
 
         binary_train_labels = to_binary_categories(binary_train_labels, lambda x: 1 if x == combination[0] else -1)
-        hyperplane, l = fit(binary_train_set, binary_train_labels)
+        hyperplane, l = fit(binary_train_set, binary_train_labels, n_epoch=10)
+
         # predict all samples using trained classifier
         for i in range(0, len(test_labels)):
             prediction = predict(np.array([test_set[i]]), hyperplane)
@@ -173,27 +174,23 @@ def one_vs_one(train_set, train_labels, test_set, test_labels):
 
 
 
-def main():
-    """
+if __name__ == "__main__":
+    os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-    :return: none
-    """
-    df, labels = import_data()
+    df, labels , _ = import_data()
     labels_malware = np.delete(labels, (np.where(labels == 'Benign')))
     df_malware = np.delete(df, (np.where(labels == 'Benign')), axis=0)
 
     train_set, train_labels, test_set, test_labels = split_train_test_malware(df_malware, labels_malware)
 
+    # One vs all
     start = time.time()
     one_vs_all(train_set, train_labels, test_set, test_labels)
     end = time.time()
     print(f"one_vs_all execution time: {end-start}")
 
+    # One vs one
     start = time.time()
     one_vs_one(train_set, train_labels, test_set, test_labels)
     end = time.time()
     print(f"one_vs_one execution time: {end-start}")
-
-
-if __name__ == "__main__":
-    main()

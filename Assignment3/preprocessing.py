@@ -42,7 +42,7 @@ def get_samples(n_benign=20000):
         if k%1000 == 999:
             print(f'{k+1}/{len(files_df)} files treated')
         
-        with open("data\\feature_vectors\\feature_vectors\\" + file) as f:
+        with open("data\\feature_vectors\\" + file) as f:
             lines[file] = [l.strip() for l in f.readlines()]
             
             unique_features = unique_features.union(set(lines[file]))

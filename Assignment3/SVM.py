@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 import matplotlib.pyplot as plt
-from functions import accuracy, distance_point_hyperplane, import_data, split_train_test, to_binary_categories, recreate_categories, confusion_matrix, f1_score, bold
+from functions import accuracy, import_data, split_train_test, to_binary_categories, recreate_categories, confusion_matrix, f1_score, bold
 
 
 def fit(train_set, train_labels, C=0.4, learning_rate=1e-2, n_epoch=100, eps = 1e-2):
