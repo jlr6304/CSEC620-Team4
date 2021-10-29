@@ -16,7 +16,7 @@ def recreate_categories(labels, recreate_func = lambda x: 'Benign' if x==-1 else
     """
     return np.vectorize(recreate_func)(labels)
 
-def split_train_test(df, labels, total_samples=1000, test_ratio=.1, malware_ratio=.2):
+def split_train_test(df, labels, features, total_samples=4000, test_ratio=.3, malware_ratio=.2):
     """
     #### Split the `df` dataset into training/testing samples based on the ratios
     `Note:` it keeps the ratio of the malwares families of the source dataset
@@ -60,21 +60,24 @@ def split_train_test(df, labels, total_samples=1000, test_ratio=.1, malware_rati
 
     train_set = df[list(index_train), :]
     test_set = df[list(index_test), :]
-
+    
     # Remove empty features in the train data
     empty_features = np.where(np.apply_along_axis(sum, 0, train_set)<=0)
     train_set = np.delete(train_set, empty_features, axis=1)
     test_set = np.delete(test_set, empty_features, axis=1)
+    features = np.delete(features, empty_features[0], axis=0)
 
+    # print(features.shape)
     # print(train_set.shape)
     # print(test_set.shape)
     
-    return train_set, train_labels, test_set, test_labels
+    return train_set, train_labels, test_set, test_labels, features
 
 def import_data():
     df = np.load('data/samples.npy', allow_pickle=True)
     labels = np.load('data/family.npy', allow_pickle=True)
-    return df, labels
+    features = np.load('data/features.npy', allow_pickle=True)
+    return df, labels, features
 
 def bold(string):
     return '\033[1m' + string + '\033[0m'
@@ -83,6 +86,7 @@ def confusion_matrix(pred_labels, true_labels):
     """
     #### Print the confusion matrix from the given labels (can be multicategorical)
     """
+    n = len(pred_labels)
     levels = list(np.unique(true_labels))
     
     index = dict(zip(levels, range(len(levels))))
@@ -93,7 +97,7 @@ def confusion_matrix(pred_labels, true_labels):
 
     # Print
     print(bold("Confusion matrix:"))
-    print(conf_mat)
+    print(conf_mat/n)
     print("levels:", levels, '\n')
 
 def f1_score(pred_labels, true_labels, verbose=False):
@@ -114,6 +118,23 @@ def f1_score(pred_labels, true_labels, verbose=False):
         print(bold("F1-Score:"), np.round(f_score, 4), '\n')
     else:
         return f_score
+
+def accuracy(pred_labels, true_labels, verbose=False):
+    """
+    #### Compute the accuracy of the given labels (printing the result is optionnal)
+    """
+    acc = (pred_labels == true_labels).mean()
+    
+    if verbose:
+        print(bold("Accuracy:"), np.round(100*acc, 2), '%\n')
+    else:
+        return acc
+
+def distance_point_hyperplane(x, hyperplane):
+    w = hyperplane['slope']
+    b = hyperplane['intercept']
+    d = np.abs(np.dot(w, x)-b)/np.linalg.norm(w, 2)
+    return d.item()
 
 if __name__=='__main__':
 
