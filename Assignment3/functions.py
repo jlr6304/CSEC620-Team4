@@ -87,7 +87,7 @@ def confusion_matrix(pred_labels, true_labels):
     #### Print the confusion matrix from the given labels (can be multicategorical)
     """
     n = len(pred_labels)
-    levels = list(np.unique(true_labels))
+    levels = list(np.unique(np.concatenate((true_labels, pred_labels), axis=0)))    
     
     index = dict(zip(levels, range(len(levels))))
     conf_mat = pd.DataFrame(0, index=levels, columns=levels)
