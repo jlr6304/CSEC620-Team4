@@ -7,6 +7,8 @@ Assignment3/data/samples.npy
 Assignment3/data/features.npy
 Assignment3/data/family.npy
 
+Assignment4/data
+
 # Python cache files
 __pycache__/
 *.py[cod]
