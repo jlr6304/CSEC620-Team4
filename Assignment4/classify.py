@@ -12,10 +12,13 @@ def warn(*args, **kwargs):
 import warnings
 warnings.warn = warn
 
-from sklearn.ensemble import RandomForestClassifier
+# from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+
+import RandomForest
 
 # seed value
 # (ensures consistent dataset splitting between runs)
@@ -243,13 +246,19 @@ def do_stage_1(X_tr, X_ts, Y_tr, Y_ts):
     pred : numpy array
            Final predictions on testing dataset.
     """
-    model = RandomForestClassifier(n_jobs=-1, n_estimators=1, oob_score=True)
-    model.fit(X_tr, Y_tr)
 
-    score = model.score(X_ts, Y_ts)
-    print("RF accuracy = {}".format(score))
+    forest = RandomForest.fit(X_tr, Y_tr)
 
-    pred = model.predict(X_ts)
+    pred = RandomForest.predict(X_ts, forest)
+    
+#     model = RandomForestClassifier(n_jobs=-1, n_estimators=1, oob_score=True)
+#     model.fit(X_tr, Y_tr)
+#     pred = model.predict(X_ts)
+
+    # Accuracy calculation
+    score = np.mean(pred==Y_ts) 
+    print(f"RF accuracy = {score}")
+
     return pred
 
 
@@ -302,6 +311,8 @@ def main(args):
     # print classification report
     print(classification_report(Y_ts, pred, target_names=le.classes_))
 
+    # Confusion matrix
+    print(confusion_matrix(Y_ts, pred, target_names=le.classes_))
 
 if __name__ == "__main__":
     # parse cmdline args
