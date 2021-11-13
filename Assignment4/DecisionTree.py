@@ -3,76 +3,179 @@ import numpy as np
 from math import inf
 
 class Node:
-    def __init__(self, data, labels, parent_imp = inf):
-        self.left = None
-        self.right = None
-        self.data = data
-        self.labels = labels
-        self.parentImpurity = parent_imp
+    """
+    Class implemented to create a decision tree
+    """
+    def __init__(self, data, labels, feature_subcount, depth=0, parent_imp = inf, params = {"max_depth":10, "min_node":10}):
+        """
+        Node initialization
+        """
+        self.left = None    # left children
+        self.right = None   # right children
+
+        self.data = data        # samples in the node
+        self.labels = labels    # labels of the samples
+
+        self.depth = depth  # depth-level of the node 
+
+        self.parentImpurity = parent_imp            # parent-node impurity
+        self.impurity = gini_impurity(self.labels)  # node impurity
+
+        self.split_feature = None   # feature on which to split the node (if not leaf)
+        self.split_threshold = None # threshold on the feature on which to split the node (if not leaf)
+
+        self.params = params  # tree parameters
+        
+        # --- Try to split the node 
+        self.split(feature_subcount)
+
 
     def split(self, feature_subcount):
-        if not self.isLeaf():
+        """
+        #### Method to split the node
+            splits the node if possible and create and split children nodes (recursive function) 
+
+        Parameters:
+            feature_subcount: number of features on which to try to split
+        """
+        if not self.isLeaf(): # Split if the node isn't a leaf
             
             n_samples = self.data.shape[0]
             n_features = self.data.shape[1]
 
-            # Choose randomly a subset of the features
+            # -- Choose randomly a subset of the features
             features = np.unique(np.random.choice(n_features, feature_subcount, replace=True))
-
-            # Compute the best threshold (Impurity) for each feature
+            
+            # -- Compute the best threshold (and corresponding Gini impurity) for each feature
             impurity = {f: 0 for f in features}
-            location = {f: 0 for f in features}
+            splits = {f: 0 for f in features}
             for f in features:
-                impurity[f], location[f] = best_split_impurity(self.data[:, f], self.labels)
+                impurity[f], splits[f] = best_split_impurity(self.data[:, f], self.labels)
             
+            # find the feature corresponding to the minimum Gini impurity
             best_f = min(impurity, key=impurity.get)
-            best_l = location[best_f]
-            
-            # Split on the feature with the lowest Impurity
+            best_s = splits[best_f]
+
+            self.split_feature = best_f
+            self.split_threshold = best_s
+
+            # split on the feature with the lowest Gini impurity
             target_samples = self.data[:, best_f]
 
-            mask = target_samples <= best_l
-            
-            # self.condition() updated with the new threshold 
+            mask = target_samples <= best_s
+
+            # -- Create child nodes
             left_sub_samples = self.data[mask, :]
             left_sub_labels = self.labels[mask]
-
+            
             right_sub_samples = self.data[np.logical_not(mask), :]
             right_sub_labels = self.labels[np.logical_not(mask)]
-            
-            # Create child nodes
-            self.left = Node(left_sub_samples, left_sub_labels)
-            self.right = Node(right_sub_samples, right_sub_labels)
-           
-            # Split child nodes
-            self.left.split()
-            self.right.split()
+
+            # test if conditions on the nodes are satisfied 
+            if len(left_sub_samples)>0 and len(right_sub_samples)>0 and self.impurity<self.parentImpurity:
+
+                self.left = Node(left_sub_samples, left_sub_labels, feature_subcount,\
+                     depth=self.depth + 1, parent_imp = self.impurity, params=self.params)
+
+                self.right = Node(right_sub_samples, right_sub_labels, feature_subcount,\
+                    depth=self.depth + 1, parent_imp = self.impurity, params=self.params)
+
 
     def isLeaf(self):
         """
-        Test if it is a leaf
+        #### Test if the node is a leaf:
+               returns the result as a boolean
         """
-        #check if the branch has reached the max_depth
+        # check if the branch has reached the max_depth
+        cond1 = self.depth > self.params['max_depth']
 
-        #check if the number of samples in the group to split is less than the min_node
+        # check if the number of samples in the group to split is less than the min_node
+        cond2 = len(self.labels) < self.params['min_node']        
 
-        #check if the optimal split results in a group with no samples, in which case use the parent node
+        return cond1 or cond2
+
+    def predict(self, sample):
+        """
+        #### Predict the label of a sample if it is a leaf, otherwise predict the sample on the right 
+        #### or left node depending on the feature and split threshold
+        (recursive function)
+        """
+        # Check if it is a leaf
+        if self.left == None and self.right == None:
+            l, c = np.unique(self.labels, return_counts = True)
+            
+            return l[np.argsort(c)[-1]]
+
+        else:
+            # Predict on left or right child node 
+            if sample[self.split_feature] <= self.split_threshold:
+                return self.left.predict(sample)
+            else:
+                return self.right.predict(sample)
+
+
+def gini_impurity(labels):
+    """
+    #### Compute the Gini impurity of a node based on its labels
+    Parameters:
+        labels: sample labels of the node
+
+    Return: 
+        impurity: Gini impurity of the node
+    """
+    unique_labels, counts = np.unique(labels, return_counts = True)
+    proportions = counts/len(labels)
+
+    impurity = np.sum(proportions * (1-proportions))
+    
+    return impurity
+
+def best_split_impurity(feature, labels):
+    """
+    #### Find the split threshold to minimize the Gini impurity if the node is splitted on the given feature: 
+        Goes through every possible split of a feature, compute the associated impurity and return the lowest
+
+    Parameters:
+        feature: single-feature value for all the samples
+        labels: labels of the samples
+
+    Return:
+        best_impurity: lowest Gini impurity
+        best_split: threshold to obtain the lowest impurity
+    """
+    # -- Sort the samples
+    sorted_ind = np.argsort(feature)
+
+    feature = feature[sorted_ind]
+    labels = labels[sorted_ind]
+    
+    # -- Compute Gini impurity of every potential split
+    potential_splits= (feature[1:] + feature[:-1])/2
+    impurity = {s:0 for s in potential_splits}
+    
+    for s in potential_splits:
+        mask = feature <= s
+
+        # -- Left node impurity
+        left_sub_labels = labels[mask]
+        left_impurity = gini_impurity(left_sub_labels)
+
+        # -- Right node impurity
+        right_sub_labels = labels[np.logical_not(mask)]
+        right_impurity = gini_impurity(right_sub_labels)
+
+        # -- Compute Node Gini impurity
+        # weight by the size of the subsamples
+        left_weight = len(left_sub_labels)/len(labels)
+        right_weight = len(right_sub_labels)/len(labels)
         
-        #check if the optimal split has a worse Gini impurity than the parent node, in which case use the parent node.
+        total_impurity = (left_weight*left_impurity)+(right_weight*right_impurity)
 
-def fit(train_set, train_labels, feature_subcount, max_depth=10, min_node=10):
-    tree = Node(train_set, train_labels)
+        # store the result
+        impurity[s] = total_impurity
 
-    tree.split(feature_subcount)
+    # -- Find the lowest Gini impurity
+    best_split = min(impurity, key=impurity.get)
+    best_impurity = impurity[best_split]
 
-    return tree
-
-def predict():
-    pass
-
-
-def gini_impurity():
-    pass
-
-def best_split_impurity():
-    pass
+    return best_impurity, best_split

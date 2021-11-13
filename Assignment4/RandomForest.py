@@ -1,25 +1,39 @@
 import numpy as np
-import DecisionTree
+from DecisionTree import Node
 
-def fit(train_set, train_labels, n_trees=500, data_frac=.3, features_subcount=5):
+def fit(train_set, train_labels, n_trees=40, data_frac=.6, feature_subcount=4, max_depth = 10, min_node = 10):
+    """
+    #### Train a Random Forest model based on the data
+    parameters:
+        train_set: train samples
+        train_labels: labels of the train samples
+        n_trees: number of trees of the forest
+        data_frac: fraction of bootstrapped samples in each tree
+        feature_subcount: number of features to consider at each node
+        max_depth: maximum depth (number of levels) of each tree 
+        min_node: minimum number of samples in a node in each tre 
+    return:
+        model: the trained model
+    """
     n = train_set.shape[0]
 
     # initialize model array of size n_trees
-    model = np.empty(n_trees)
+    model = []
 
     # For each tree
     for i in range (0, n_trees):
-        # Subsample
-        subsample_index = np.random.choice(n, n*data_frac, replace=True)
+        print(f"\t{i+1}/{n_trees}")
+        
+        # Create samples subset
+        subsample_index = np.random.choice(n, int(n*data_frac), replace=True)
         sub_set = train_set[subsample_index, :]
-        sub_labels = sub_labels[subsample_index]
+        sub_labels = train_labels[subsample_index]
         
         # Build the tree
-        tree = DecisionTree.fit(sub_set, sub_labels, features_subcount=features_subcount)
+        tree = Node(sub_set, sub_labels, feature_subcount, params = {"max_depth":max_depth, "min_node":min_node})
         
         # Store the tree
-        model[i] = tree
-
+        model.append(tree)
 
     return model
 
@@ -37,15 +51,49 @@ def predict(test_set, model, unique_labels):
     n = test_set.shape[0]
     
     # Predict the labels for each sample
-    pred = np.empty(n)
+    pred = []
     for i in range(n):
+        # Count for majority vote
         ballot = {l:0 for l in unique_labels}
 
         # Predict the label of the samples for each tree
         for tree in model:
-            ballot[DecisionTree.predict(test_set[i, :], tree)] += 1
+            ballot[tree.predict(test_set[i, :])] += 1
         
-        # Assign the most common label
-        pred[i] = max(ballot, key=ballot.get)
+        # Majority vote (assign the most common label)
+        pred.append( max(ballot, key=ballot.get) )
 
-    return pred
+    return np.array(pred)
+
+
+
+# -- Random Forest & Decision tree tests
+if __name__ == '__main__':
+    # Random samples creation
+    n_samples = 1000
+    n_test = 30
+    n_features = 5
+
+    train = np.random.rand(n_samples, n_features)
+    test = np.random.rand(n_test, n_features)
+
+    label = np.array(["class" + str(int(r)) for r in  np.random.rand(n_samples)*3])
+    unique_labels = np.unique(label)
+
+    # --- Testing Random Forest
+    # Training
+    print("--- Random Forest training --- ")
+    forest = fit(train, label, n_trees=20)
+    
+    # Predicting
+    print("--- Random Forest prediction --- ")
+    RF_pred = predict(test, forest, unique_labels)
+
+    # --- Testing Decision Tree
+    # Training
+    print("--- Decision Tree training --- ")
+    tree = fit(train, label, n_trees=1, data_frac=1, feature_subcount=n_features, max_depth = 10, min_node = 5)    
+
+    # Predicting
+    print("--- Decision Tree prediction --- ")
+    DT_pred = predict(test, tree, unique_labels)

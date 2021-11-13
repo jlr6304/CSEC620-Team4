@@ -4,6 +4,7 @@ import json
 import argparse
 import os
 import numpy as np
+import pandas as pd
 import tqdm
 
 # Supress sklearn warnings
@@ -19,11 +20,12 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 
 import RandomForest
+import time
+import matplotlib.pyplot as plt
 
 # seed value
 # (ensures consistent dataset splitting between runs)
 SEED = 0
-
 
 def parse_args():
     """
@@ -38,7 +40,7 @@ def parse_args():
             return x
     parser.add_argument('-r', '--root', type=lambda x: check_path(parser, x), 
                         help='The path to the root directory containing feature files.')
-    parser.add_argument('-s', '--split', type=float, default=0.7, 
+    parser.add_argument('-s', '--split', type=float, default=0.7, #default=0.7, 
                         help='The percentage of samples to use for training.')
 
     return parser.parse_args()
@@ -225,9 +227,9 @@ def do_stage_0(Xp_tr, Xp_ts, Xd_tr, Xd_ts, Xc_tr, Xc_ts, Y_tr, Y_ts):
     return resp_tr, resp_ts, resd_tr, resd_ts, resc_tr, resc_ts
 
 
-def do_stage_1(X_tr, X_ts, Y_tr, Y_ts):
+def randomforest_classification(X_tr, X_ts, Y_tr, Y_ts, labels, store_confusion=False):
     """
-    Perform stage 1 of the classification procedure:
+    Perform the classification procedure:
         train a random forest classifier using the NB prediction probabilities
 
     Parameters
@@ -240,26 +242,189 @@ def do_stage_1(X_tr, X_ts, Y_tr, Y_ts):
            Array containing testing samples.
     Y_ts : numpy array
            Array containing testing labels
-
-    Returns
-    -------
-    pred : numpy array
-           Final predictions on testing dataset.
+    store_confusion : bool
+           If the confusion matrix need to be saved 
     """
 
-    forest = RandomForest.fit(X_tr, Y_tr)
+    # -- Using skLearn (original version)
+    # model = RandomForestClassifier(n_jobs=-1, n_estimators=1, oob_score=True)
+    # model.fit(X_tr, Y_tr)
+    # pred = model.predict(X_ts)
 
-    pred = RandomForest.predict(X_ts, forest)
-    
-#     model = RandomForestClassifier(n_jobs=-1, n_estimators=1, oob_score=True)
-#     model.fit(X_tr, Y_tr)
-#     pred = model.predict(X_ts)
+    # -- Using RandomForest.py module
+    # fit the forest
+    forest = RandomForest.fit(X_tr, Y_tr, n_trees=40, data_frac=.6, feature_subcount=4, max_depth = 10, min_node = 10)
 
-    # Accuracy calculation
+    # predict the labels
+    pred = RandomForest.predict(X_ts, forest, np.unique(Y_tr))
+
+    # -- Performances
+    # accuracy
     score = np.mean(pred==Y_ts) 
     print(f"RF accuracy = {score}")
 
-    return pred
+    # classification report
+    print(classification_report(Y_ts, pred, target_names=labels))
+
+    Y_ts = labels[Y_ts]
+    pred = labels[pred]
+    
+    # confusion matrix
+    print(confusion_matrix(Y_ts, pred, labels=labels, normalize='true'))
+
+    #   save confusion matrix
+    if store_confusion:
+        pd.DataFrame(
+            confusion_matrix(Y_ts, pred, labels=labels, normalize='true'), columns=labels, index=labels
+        )\
+            .to_csv('confusion_matrix.csv', sep = ";")
+
+
+def algorithm_comparison(X_tr, X_ts, Y_tr, Y_ts):
+    """
+    Compare the performances of Random Forest and Decision Tree classifiers:
+        train a random forest classifier and a decision tree classifier and display training time and accuracy
+
+    Parameters
+    ----------
+    X_tr : numpy array
+           Array containing training samples.
+    Y_tr : numpy array
+           Array containing training labels.
+    X_ts : numpy array
+           Array containing testing samples.
+    Y_ts : numpy array
+           Array containing testing labels
+    """
+    unique_Y = np.unique(Y_tr) # unique labels in training
+    
+    # -- Using Random Forest algorithm
+    print("--- Random Forest training --- ")
+    # fit the forest
+    RF_start=time.time()
+    forest = RandomForest.fit(X_tr, Y_tr, n_trees=40, data_frac=.6, feature_subcount=4, max_depth = 10, min_node = 10)
+    RF_stop=time.time()
+
+    # predict the labels
+    RF_pred = RandomForest.predict(X_ts, forest, unique_Y)
+
+    # Performance
+    RF_score = np.mean(RF_pred==Y_ts) 
+    RF_time=(RF_stop-RF_start)
+
+    
+    # -- Using Decision Tree algorithm
+    print("--- Decision Tree training --- ")
+    
+    # fit the tree
+    DT_start=time.time()
+    tree = RandomForest.fit(X_tr, Y_tr, n_trees=1, data_frac=1, feature_subcount=X_tr.shape[1], max_depth = 10, min_node = 5)
+    DT_stop=time.time()
+
+    # predict the labels
+    DT_pred = RandomForest.predict(X_ts, tree, unique_Y)
+
+    # Performances
+    DT_score = np.mean(DT_pred==Y_ts) 
+    DT_time=(DT_stop-DT_start)
+    
+
+    # -- Performances comparison 
+    print('\033[1m' + "Random Forest performances" + '\033[0m')
+    print(f"RF accuracy = {RF_score}")
+    print(f"RF time = {RF_time}s")
+
+    print('\033[1m' + "Decision Tree performances" + '\033[0m')
+    print(f"DT accuracy = {DT_score}")
+    print(f"DT time = {DT_time}")
+
+
+def node_importance(X_tr, X_ts, Y_tr, Y_ts):
+    """
+    Display the labels and the impurity of a node and its children in order to compute the node importance
+        
+    Parameters
+    ----------
+    X_tr : numpy array
+           Array containing training samples.
+    Y_tr : numpy array
+           Array containing training labels.
+    X_ts : numpy array
+           Array containing testing samples.
+    Y_ts : numpy array
+           Array containing testing labels
+    """
+    unique_Y = np.unique(Y_tr) # unique labels of train set samples
+    
+    # -- Train Random Forest classifier
+    print("--- Random Forest training --- ")
+    # fit the forest
+    forest = RandomForest.fit(X_tr, Y_tr, n_trees=20)
+
+    # -- Select a node and show its labels and impurity
+    parent = forest[0].right # can be changed
+
+    print("parent labels: ", parent.labels)
+    print("parent impurity: ", parent.impurity, end = 2*'\n')
+    
+    print("left child labels: \n", parent.left.labels)
+    print("left child impurity: ", parent.left.impurity, end = 2*'\n')
+
+    print("right child labels: \n", parent.right.labels)
+    print("right child impurity: ", parent.right.impurity, end = 2*'\n')
+
+    weighted_average = (parent.left.impurity*len(parent.left.labels) + parent.right.impurity*len(parent.right.labels)) / len(parent.labels)
+    print("Node importance: ", parent.impurity - weighted_average)
+
+
+def hyperparameter_tuning(X_tr, X_ts, Y_tr, Y_ts):
+    """
+    Method to tune the Random Forest classifier hyperparameters:
+        Compute and graph the accuracy for a range of a chosen hyperparameter
+        
+    Parameters
+    ----------
+    X_tr : numpy array
+           Array containing training samples.
+    Y_tr : numpy array
+           Array containing training labels.
+    X_ts : numpy array
+           Array containing testing samples.
+    Y_ts : numpy array
+           Array containing testing labels
+    """
+    # Hyperparameters list (single values are best hyperparameters) 
+    n_trees_range = [30] #np.arange(1, 16)*5
+    data_frac_range = [.2, .4, .6, .8, 1] # [.6]
+    feature_subcount_range = [4] # [2, 3, 4, 5, 6]
+    max_depth_range = [10] # [10, 20, 50, 100]
+    min_node_range = [5] # [5, 10, 20, 50]
+
+    score = []
+    for n_trees in n_trees_range:
+        for data_frac in data_frac_range:
+            for feature_subcount in feature_subcount_range:
+                for max_depth in max_depth_range:
+                    for min_node in min_node_range:
+                        
+                        # Compute the accuracy of the corresponding forest
+                        forest = RandomForest.fit(X_tr, Y_tr, \
+                            n_trees,\
+                            data_frac,\
+                            feature_subcount,\
+                            max_depth,\
+                            min_node)    
+
+                        pred = RandomForest.predict(X_ts, forest, np.unique(Y_tr))
+
+                        score.append(np.mean(pred==Y_ts)) # add accuracy to the scores
+
+    # Graph the results
+    range = np.array(data_frac_range)
+    score = np.array(score)
+
+    plt.plot(range, score)
+    plt.show()
 
 
 def main(args):
@@ -304,15 +469,21 @@ def main(args):
     X_tr_full = np.hstack((X_tr, p_tr, d_tr, c_tr))
     X_ts_full = np.hstack((X_ts, p_ts, d_ts, c_ts))
 
-    # perform final classification
-    print("Performing Stage 1 classification ... ")
-    pred = do_stage_1(X_tr_full, X_ts_full, Y_tr, Y_ts)
+    # # -------- Perform final classification
+    print("Random Forest classification")
+    randomforest_classification(X_tr_full, X_ts_full, Y_tr, Y_ts, le.classes_)
 
-    # print classification report
-    print(classification_report(Y_ts, pred, target_names=le.classes_))
+    # # -------- Decision Tree and Random Forest Comparison
+    # print("DT and RF classifiers comparison")
+    # algorithm_comparison(X_tr_full, X_ts_full, Y_tr, Y_ts)
 
-    # Confusion matrix
-    print(confusion_matrix(Y_ts, pred, target_names=le.classes_))
+    # # ------ Node importance calculation
+    # print("Node importance computation")
+    # node_importance(X_tr_full, X_ts_full, Y_tr, Y_ts)
+
+    # # ------ Hyperparameter tuning
+    # print("Hyperparameter tuning")
+    # hyperparameter_tuning(X_tr_full, X_ts_full, Y_tr, Y_ts)
 
 if __name__ == "__main__":
     # parse cmdline args
