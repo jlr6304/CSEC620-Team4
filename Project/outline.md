@@ -11,6 +11,7 @@
 
 - Preprocessing
     - *generated .csv preview* - splitting the data (training, validation set, test) (Nick)
+    - Normalization considerations
 
 
 - Modeling (results + tuning) 
