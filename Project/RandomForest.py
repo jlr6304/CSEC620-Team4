@@ -5,11 +5,9 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score
 
 
-
-
 def run_RF(X_train, y_train, X_test, y_test, n_trees=5, feature_subcount=3, max_depth=12, min_node=1):
     """
-    ### Run Random Forest on the dataset and save the predicted labels as a file
+    ### Run Random Forest classifier on the dataset and save the predicted labels as a file
 
     """
     # ---- Random Forest Initialization
@@ -21,7 +19,7 @@ def run_RF(X_train, y_train, X_test, y_test, n_trees=5, feature_subcount=3, max_
     # ---- Predict on testing
     y_pred = (model.predict(X_test))
 
-    np.save("data/pred_labels_NN.npy", y_pred)
+    np.save("data/pred_labels_RF.npy", y_pred)
     _f1_score = f1_score(y_test, y_pred)
     print("f1_score =",_f1_score)
     return y_pred
@@ -29,7 +27,7 @@ def run_RF(X_train, y_train, X_test, y_test, n_trees=5, feature_subcount=3, max_
 
 def tune_RF(X_train,y_train):
     """
-    ### Tune Random Forest maximum depth of the tree
+    ### Tune Random Forest hyperparameters of the tree
 
     The tuning is done on a validation set different from the testing set
     """
@@ -61,8 +59,6 @@ def tune_RF(X_train,y_train):
     plt.show()
 
 
-
-
 if __name__ == '__main__':
     # -- Load data
     X_train = np.load("data/train_set.npy", allow_pickle=True)
@@ -71,8 +67,10 @@ if __name__ == '__main__':
     X_test = np.load("data/test_set.npy", allow_pickle=True)
     y_test = np.load("data/test_labels.npy", allow_pickle=True)
 
-    # -- Tune Random Forest
-    tune_RF(X_train, y_train)
-
     # -- Run Random Forest
     run_RF(X_train, y_train, X_test, y_test, n_trees=5, feature_subcount=3, max_depth=12, min_node=1)
+    
+    # -- Tune Random Forest
+    # tune_RF(X_train, y_train)
+
+    
