@@ -10,6 +10,10 @@ Assignment3/data/family.npy
 Assignment4/iot_data
 Assignment4/img/raw
 
+Project/data/save
+Project/export
+Project/.ipynb_checkpoints
+
 # Python cache files
 __pycache__/
 *.py[cod]
