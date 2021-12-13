@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score
 
 
-def run_RF(X_train, y_train, X_test, y_test, n_trees=5, feature_subcount=3, max_depth=12, min_node=1):
+def run_RF(X_train, y_train, X_test, y_test, n_trees=150, feature_subcount=3, max_depth=12, min_node=1):
     """
     ### Run Random Forest classifier on the dataset and save the predicted labels as a file
 
@@ -35,9 +35,9 @@ def tune_RF(X_train,y_train):
     X_train, X_vali, y_train, y_vali = train_test_split(X_train, y_train, test_size=.3)
 
     # Hyperparameters list (single values are best hyperparameters)
-    n_trees_range = [3]  # np.arange(1, 10)
+    n_trees_range =  np.arange(10, 500, 20) # [150]
     feature_subcount_range = [3]  # np.arange(1, 10)
-    max_depth_range = np.arange(1, 20)  # [12]
+    max_depth_range = [12] # np.arange(1, 20)
     min_node_range = [1]  # np.arange(1, 10)
 
     score = []
@@ -52,7 +52,7 @@ def tune_RF(X_train,y_train):
                     score.append(_f1_score)  # add f1-score to the score array
 
     # Graph the results
-    range = np.array(max_depth_range)
+    range = np.array(n_trees_range)
     score = np.array(score)
 
     plt.plot(range, score)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     y_test = np.load("data/test_labels.npy", allow_pickle=True)
 
     # -- Run Random Forest
-    run_RF(X_train, y_train, X_test, y_test, n_trees=5, feature_subcount=3, max_depth=12, min_node=1)
+    run_RF(X_train, y_train, X_test, y_test, n_trees=200, feature_subcount=3, max_depth=12, min_node=1)
     
     # -- Tune Random Forest
     # tune_RF(X_train, y_train)
