@@ -84,8 +84,5 @@ if __name__ == '__main__':
     # -- Run SVM
     print("F1-score: ", run_SVM(X_train, Y_train, X_test, Y_test))
 
-    # -- Tune Neural Network
+    # -- Tune SVM
     # tune_SVM(X_train, Y_train)
-
-    # -- Neural Network convergence
-    # check_convergence(X_train, y_train, n_epochs=200, batch_size=50)
