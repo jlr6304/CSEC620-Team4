@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 # Personnalized metric: F1-score
 def f1_m(y_true, y_pred):
     """
-    ### Computes F1-score using Keras synthax
+    ### Computes F1-score using Keras syntax
     """
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
